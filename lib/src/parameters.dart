@@ -32,26 +32,6 @@ class ParametersScopeState extends State<ParametersScope> {
   /// Story id -> {parameter name -> parameter value}
   var _storiesParams = <String, Map<String, Object?>>{};
 
-  @override
-  void didChangeDependencies() {
-    final story = StoryNotifier.of(context).activeStory;
-
-    if (story != null && _storiesParams.containsKey(story.id) == false) {
-      _storiesParams = {
-        story.id: Map.fromEntries(
-          story.parameters.map(
-            (parameter) => MapEntry(
-              parameter.name,
-              parameter.initialValue,
-            ),
-          ),
-        ),
-      };
-    }
-
-    super.didChangeDependencies();
-  }
-
   void updateParameterValue<T extends Object?>({
     required String storyId,
     required String parameterName,
@@ -69,17 +49,37 @@ class ParametersScopeState extends State<ParametersScope> {
 
   /// Get parameter value.
   T getParameterValue<T extends Object?>(String parameterName, {String? storyId}) {
-    final activeStory = storyId ?? StoryNotifier.of(context, listen: false).activeStory?.id;
+    final $storyId = storyId ?? StoryNotifier.of(context, listen: false).activeStory?.id;
 
-    return _storiesParams[activeStory]?[parameterName] as T;
+    return _storiesParams[$storyId]?[parameterName] as T;
   }
 
   @override
-  Widget build(BuildContext context) => _InheritedParameters(
-        state: this,
-        storiesParams: _storiesParams,
-        child: widget.child,
-      );
+  Widget build(BuildContext context) {
+    final story = StoryNotifier.of(context).activeStory;
+    final oldParams = _storiesParams[story?.id] ?? const {};
+    final newParams = story?.parameters.fold<Map<String, Object?>>(
+          {},
+          (params, parameter) => {
+            ...params,
+            parameter.name: oldParams[parameter.name] ?? parameter.initialValue,
+          },
+        ) ??
+        {};
+
+    if (story != null) {
+      _storiesParams = {
+        ..._storiesParams,
+        story.id: newParams,
+      };
+    }
+
+    return _InheritedParameters(
+      state: this,
+      storiesParams: _storiesParams,
+      child: widget.child,
+    );
+  }
 }
 
 /// {@template inherited_parameters}
@@ -134,6 +134,7 @@ class StringParameter extends Parameter<String> {
 
   @override
   Widget build(BuildContext context, {required ValueChanged<String> onChanged}) => TextFormField(
+        key: ValueKey(name),
         initialValue: initialValue,
         onChanged: onChanged,
         decoration: InputDecoration(labelText: name),

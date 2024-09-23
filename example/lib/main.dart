@@ -16,13 +16,13 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
+        debugShowCheckedModeBanner: false,
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
             seedColor: Colors.transparent,
             dynamicSchemeVariant: DynamicSchemeVariant.monochrome,
           ),
         ),
-        debugShowCheckedModeBanner: false,
         home: Scaffold(
           body: RenderStoryboard(
             storyboard: Storyboard(
@@ -38,15 +38,13 @@ class MyApp extends StatelessWidget {
                         StringParameter(name: 'title', initialValue: 'Title'),
                         DoubleParameter(name: 'price', initialValue: 10),
                       ],
-                      builder: (context) {
-                        return SizedBox(
-                          width: 300,
-                          child: ShopCard(
-                            title: context.parameters.getParameterValue('title'),
-                            price: context.parameters.getParameterValue('price'),
-                          ),
-                        );
-                      },
+                      builder: (context) => SizedBox(
+                        width: 300,
+                        child: ShopCard(
+                          title: context.parameters.getParameterValue('title'),
+                          price: context.parameters.getParameterValue('price'),
+                        ),
+                      ),
                     ),
                   ],
                 )
