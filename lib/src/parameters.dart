@@ -18,7 +18,7 @@ class ParametersScope extends StatefulWidget {
   static ParametersScopeState of(BuildContext context) {
     final result = context.dependOnInheritedWidgetOfExactType<_InheritedParameters>();
     if (result == null) {
-      throw Exception('No ParametersScope found in context');
+      throw Exception('No $ParametersScope found in context');
     }
     return result.state;
   }
@@ -106,7 +106,7 @@ class _InheritedParameters extends InheritedWidget {
 
 extension ParametersExtension on BuildContext {
   /// Get parameters scope.
-  ParametersScopeState get parameters => ParametersScope.of(this); 
+  ParametersScopeState get parameters => ParametersScope.of(this);
 }
 
 abstract class Parameter<T> {
@@ -157,6 +157,7 @@ class DoubleParameter extends Parameter<double> {
     required ValueChanged<double> onChanged,
   }) =>
       Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(name),

@@ -48,7 +48,7 @@ class Storyboard {
 /// It can be used to represent a single screen or a single component.
 /// It can have children stories to represent a screen with multiple components.
 class Story {
-  Story({
+  const Story({
     required this.id,
     required this.title,
     this.children = const [],
@@ -64,6 +64,7 @@ class Story {
   /// For example, "Login Screen", "Button", "Text Field".
   final String title;
 
+  /// List of parameters for the story.
   final List<Parameter<Object?>> parameters;
 
   /// Builder function that returns the widget to be rendered.
