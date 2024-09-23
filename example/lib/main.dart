@@ -124,7 +124,7 @@ class ShopCardState extends State<ShopCard> {
                     ),
                   ],
                 ),
-                ElevatedButton(
+                FilledButton(
                   onPressed: () {
                     // Add to cart logic here
                   },
