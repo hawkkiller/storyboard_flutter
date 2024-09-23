@@ -75,24 +75,11 @@ class __RenderStoryboardState extends State<_RenderStoryboard> {
                   return const SizedBox.shrink();
                 }
 
-                return Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: Text(
-                        activeStory.title,
-                        style: Theme.of(context).textTheme.headlineMedium,
-                      ),
-                    ),
-                    Expanded(
-                      child: Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: activeStory.builder!(context),
-                        ),
-                      ),
-                    ),
-                  ],
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: activeStory.builder!(context),
+                  ),
                 );
               },
             ),
