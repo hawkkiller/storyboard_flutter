@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:storyboard_flutter/src/plugin.dart';
-import 'package:storyboard_flutter/src/storyboard.dart';
 import 'package:storyboard_flutter/storyboard_flutter.dart';
 
 /// {@template render_storyboard}
@@ -59,6 +58,7 @@ class __RenderStoryboardState extends State<_RenderStoryboard> {
   @override
   Widget build(BuildContext context) {
     final activeStory = storyNotifier.activeStory;
+
     return Row(
       children: [
         StoriesVerticalList(
@@ -68,21 +68,21 @@ class __RenderStoryboardState extends State<_RenderStoryboard> {
         ),
         Expanded(
           flex: 3,
-          child: MaterialApp(
-            home: Builder(
-              builder: (context) {
-                if (activeStory == null) {
-                  return const SizedBox.shrink();
-                }
-
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: activeStory.builder!(context),
-                  ),
+          child: Builder(
+            builder: (context) {
+              if (activeStory == null) {
+                return const Center(
+                  child: Text('Select a story to render'),
                 );
-              },
-            ),
+              }
+
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: activeStory.builder!(context),
+                ),
+              );
+            },
           ),
         ),
         OptionsSidebar(storyboard: widget.storyboard, activeStory: activeStory),
@@ -216,48 +216,108 @@ class StoriesVerticalList extends StatefulWidget {
 
 class _StoriesVerticalListState extends State<StoriesVerticalList> {
   double width = 200;
+  final filterController = TextEditingController();
 
   @override
-  Widget build(BuildContext context) => Stack(
-        children: [
-          SizedBox(
-            width: width,
-            child: Material(
-              elevation: 2,
-              color: Theme.of(context).colorScheme.surfaceContainer,
-              child: ListView.builder(
-                physics: const BouncingScrollPhysics(),
-                itemCount: widget.stories.length,
-                itemBuilder: (context, index) => _StoryTile(
-                  story: widget.stories[index],
-                  activeStory: widget.activeStory,
-                  onStorySelected: widget.onStorySelected,
-                  isRoot: true,
+  void dispose() {
+    filterController.dispose();
+    super.dispose();
+  }
+
+  List<Story> filterStories(String filter) {
+    if (filter.isEmpty) {
+      return widget.stories;
+    }
+
+    final filteredStories = <Story>[];
+    final Set<String> addedStoryIds = <String>{};
+    final stack = <Story>[...widget.stories.reversed];
+
+    while (stack.isNotEmpty) {
+      final story = stack.removeLast();
+
+      if (story.title.toLowerCase().contains(filter.toLowerCase()) && !addedStoryIds.contains(story.id)) {
+        filteredStories.add(story);
+        addedStoryIds.add(story.id);
+      }
+
+      // Add children to the stack in reverse order
+      // This ensures we process them in the original order
+      stack.addAll(story.children.reversed);
+    }
+
+    return filteredStories;
+  }
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+        listenable: filterController,
+        builder: (context, _) {
+          final stories = filterStories(filterController.text);
+          return Stack(
+            children: [
+              Column(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      width: width,
+                      child: Material(
+                        elevation: 2,
+                        color: Theme.of(context).colorScheme.surfaceContainer,
+                        child: Column(
+                          children: [
+                            SizedBox(
+                              width: double.infinity,
+                              child: TextField(
+                                controller: filterController,
+                                decoration: const InputDecoration(
+                                  hintText: 'Filter stories',
+                                  contentPadding: EdgeInsets.all(8),
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: ListView.builder(
+                                physics: const BouncingScrollPhysics(),
+                                itemCount: stories.length,
+                                itemBuilder: (context, index) => _StoryTile(
+                                  story: stories[index],
+                                  activeStory: widget.activeStory,
+                                  onStorySelected: widget.onStorySelected,
+                                  isRoot: true,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              Positioned(
+                right: 0,
+                bottom: 0,
+                top: 0,
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.resizeColumn,
+                  child: GestureDetector(
+                    onHorizontalDragUpdate: (details) {
+                      setState(() {
+                        width = (width + details.primaryDelta!).clamp(200.0, 400.0);
+                      });
+                    },
+                    child: const SizedBox(
+                      height: double.infinity,
+                      width: 4,
+                      child: ColoredBox(color: Colors.transparent),
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-          Positioned(
-            right: 0,
-            bottom: 0,
-            top: 0,
-            child: MouseRegion(
-              cursor: SystemMouseCursors.resizeColumn,
-              child: GestureDetector(
-                onHorizontalDragUpdate: (details) {
-                  setState(() {
-                    width = (width + details.primaryDelta!).clamp(200.0, 400.0);
-                  });
-                },
-                child: const SizedBox(
-                  height: double.infinity,
-                  width: 4,
-                  child: ColoredBox(color: Colors.transparent),
-                ),
-              ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       );
 }
 
