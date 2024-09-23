@@ -165,7 +165,7 @@ class _Parameters extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: parameter.build(
                 context,
-                onChanged: (value) => ParametersScope.of(context).updateParameterValue(
+                onChanged: (value) => context.parameters.updateParameterValue(
                   storyId: activeStory.id,
                   parameterName: parameter.name,
                   value: value,
