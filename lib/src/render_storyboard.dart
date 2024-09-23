@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:storyboard_flutter/src/plugin.dart';
-import 'package:storyboard_flutter/src/storyboard.dart';
 import 'package:storyboard_flutter/storyboard_flutter.dart';
 
 /// {@template render_storyboard}
@@ -26,9 +25,11 @@ class _RenderStoryboardState extends State<RenderStoryboard> {
   @override
   Widget build(BuildContext context) => StoryNotifier(
         storyboard: widget.storyboard,
-        child: _StoryboardWrappers(
-          plugins: widget.storyboard.plugins,
-          child: _RenderStoryboard(storyboard: widget.storyboard),
+        child: ParametersScope(
+          child: _StoryboardWrappers(
+            plugins: widget.storyboard.plugins,
+            child: _RenderStoryboard(storyboard: widget.storyboard),
+          ),
         ),
       );
 }
@@ -57,6 +58,7 @@ class __RenderStoryboardState extends State<_RenderStoryboard> {
   @override
   Widget build(BuildContext context) {
     final activeStory = storyNotifier.activeStory;
+
     return Row(
       children: [
         StoriesVerticalList(
@@ -66,58 +68,100 @@ class __RenderStoryboardState extends State<_RenderStoryboard> {
         ),
         Expanded(
           flex: 3,
-          child: MaterialApp(
-            home: Builder(
-              builder: (context) {
-                if (activeStory == null) {
-                  return const SizedBox.shrink();
-                }
-
-                return Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: Text(
-                        activeStory.title,
-                        style: Theme.of(context).textTheme.headlineMedium,
-                      ),
-                    ),
-                    Expanded(
-                      child: Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: activeStory.builder!(context),
-                        ),
-                      ),
-                    ),
-                  ],
+          child: Builder(
+            builder: (context) {
+              if (activeStory == null) {
+                return const Center(
+                  child: Text('Select a story to render'),
                 );
-              },
-            ),
+              }
+
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: activeStory.builder!(context),
+                ),
+              );
+            },
           ),
         ),
-        Material(
-          elevation: 2,
-          color: Theme.of(context).colorScheme.surfaceContainer,
-          child: SizedBox(
-            width: 200,
-            height: double.infinity,
-            child: Column(
-              children: [
-                for (final plugin in widget.storyboard.plugins)
-                  if (plugin.panelBuilder != null) ...[
-                    Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: plugin.panelBuilder!(context),
-                    ),
-                  ],
-              ],
-            ),
-          ),
-        ),
+        OptionsSidebar(storyboard: widget.storyboard, activeStory: activeStory),
       ],
     );
   }
+}
+
+class OptionsSidebar extends StatelessWidget {
+  const OptionsSidebar({
+    super.key,
+    required this.storyboard,
+    required this.activeStory,
+  });
+
+  final Storyboard storyboard;
+  final Story? activeStory;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        elevation: 2,
+        color: Theme.of(context).colorScheme.surfaceContainer,
+        child: SizedBox(
+          width: 250,
+          height: double.infinity,
+          child: Column(
+            children: [
+              if (activeStory != null) ...[
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: _Parameters(activeStory: activeStory!),
+                ),
+                const Divider(),
+              ],
+              for (final plugin in storyboard.plugins)
+                if (plugin.panelBuilder != null) ...[
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: plugin.panelBuilder!(context),
+                  ),
+                ],
+            ],
+          ),
+        ),
+      );
+}
+
+/// {@template render_storyboard}
+/// _Parameters widget.
+/// {@endtemplate}
+class _Parameters extends StatelessWidget {
+  /// {@macro render_storyboard}
+  const _Parameters({
+    super.key, // ignore: unused_element
+    required this.activeStory,
+  });
+
+  final Story activeStory;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('Parameters', style: TextStyle(fontWeight: FontWeight.bold)),
+          for (final parameter in activeStory.parameters)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: parameter.build(
+                context,
+                onChanged: (value) => context.parameters.updateParameterValue(
+                  storyId: activeStory.id,
+                  parameterName: parameter.name,
+                  value: value,
+                ),
+              ),
+            ),
+        ],
+      );
 }
 
 /// {@template storyboard_wrappers}
@@ -172,48 +216,108 @@ class StoriesVerticalList extends StatefulWidget {
 
 class _StoriesVerticalListState extends State<StoriesVerticalList> {
   double width = 200;
+  final filterController = TextEditingController();
 
   @override
-  Widget build(BuildContext context) => Stack(
-        children: [
-          SizedBox(
-            width: width,
-            child: Material(
-              elevation: 2,
-              color: Theme.of(context).colorScheme.surfaceContainer,
-              child: ListView.builder(
-                physics: const BouncingScrollPhysics(),
-                itemCount: widget.stories.length,
-                itemBuilder: (context, index) => _StoryTile(
-                  story: widget.stories[index],
-                  activeStory: widget.activeStory,
-                  onStorySelected: widget.onStorySelected,
-                  isRoot: true,
+  void dispose() {
+    filterController.dispose();
+    super.dispose();
+  }
+
+  List<Story> filterStories(String filter) {
+    if (filter.isEmpty) {
+      return widget.stories;
+    }
+
+    final filteredStories = <Story>[];
+    final Set<String> addedStoryIds = <String>{};
+    final stack = <Story>[...widget.stories.reversed];
+
+    while (stack.isNotEmpty) {
+      final story = stack.removeLast();
+
+      if (story.title.toLowerCase().contains(filter.toLowerCase()) && !addedStoryIds.contains(story.id)) {
+        filteredStories.add(story);
+        addedStoryIds.add(story.id);
+      }
+
+      // Add children to the stack in reverse order
+      // This ensures we process them in the original order
+      stack.addAll(story.children.reversed);
+    }
+
+    return filteredStories;
+  }
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+        listenable: filterController,
+        builder: (context, _) {
+          final stories = filterStories(filterController.text);
+          return Stack(
+            children: [
+              Column(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      width: width,
+                      child: Material(
+                        elevation: 2,
+                        color: Theme.of(context).colorScheme.surfaceContainer,
+                        child: Column(
+                          children: [
+                            SizedBox(
+                              width: double.infinity,
+                              child: TextField(
+                                controller: filterController,
+                                decoration: const InputDecoration(
+                                  hintText: 'Filter stories',
+                                  contentPadding: EdgeInsets.all(8),
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: ListView.builder(
+                                physics: const BouncingScrollPhysics(),
+                                itemCount: stories.length,
+                                itemBuilder: (context, index) => _StoryTile(
+                                  story: stories[index],
+                                  activeStory: widget.activeStory,
+                                  onStorySelected: widget.onStorySelected,
+                                  isRoot: true,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              Positioned(
+                right: 0,
+                bottom: 0,
+                top: 0,
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.resizeColumn,
+                  child: GestureDetector(
+                    onHorizontalDragUpdate: (details) {
+                      setState(() {
+                        width = (width + details.primaryDelta!).clamp(200.0, 400.0);
+                      });
+                    },
+                    child: const SizedBox(
+                      height: double.infinity,
+                      width: 4,
+                      child: ColoredBox(color: Colors.transparent),
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-          Positioned(
-            right: 0,
-            bottom: 0,
-            top: 0,
-            child: MouseRegion(
-              cursor: SystemMouseCursors.resizeColumn,
-              child: GestureDetector(
-                onHorizontalDragUpdate: (details) {
-                  setState(() {
-                    width = (width + details.primaryDelta!).clamp(200.0, 400.0);
-                  });
-                },
-                child: const SizedBox(
-                  height: double.infinity,
-                  width: 4,
-                  child: ColoredBox(color: Colors.transparent),
-                ),
-              ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       );
 }
 
@@ -344,7 +448,7 @@ class StoryNotifierState extends State<StoryNotifier> {
       return null;
     }
 
-    for (final story in widget.storyboard.getAllStories()) {
+    for (final story in widget.storyboard.getAllStoriesUnordered()) {
       if (story.id == activeId) {
         return story;
       }

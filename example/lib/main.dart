@@ -16,17 +16,16 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
+        debugShowCheckedModeBanner: false,
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
             seedColor: Colors.transparent,
             dynamicSchemeVariant: DynamicSchemeVariant.monochrome,
           ),
         ),
-        debugShowCheckedModeBanner: false,
         home: Scaffold(
           body: RenderStoryboard(
             storyboard: Storyboard(
-              plugins: [ParametersPlugin()],
               stories: [
                 Story(
                   id: 'some-screen',
@@ -35,20 +34,17 @@ class MyApp extends StatelessWidget {
                     Story(
                       id: 'shop-card',
                       title: 'Shop Card',
-                      builder: (context) {
-                        final parametersScope = ParametersScope.of(context);
-                        return SizedBox(
-                          width: 350,
-                          child: ShopCard(
-                            title: parametersScope.addParameter(
-                              StringParameter(name: 'titled', value: 'Title'),
-                            ),
-                            price: parametersScope.addParameter(
-                              DoubleParameter(name: 'price', value: 10),
-                            ),
-                          ),
-                        );
-                      },
+                      parameters: [
+                        StringParameter(name: 'title', initialValue: 'Title'),
+                        DoubleParameter(name: 'price', initialValue: 10),
+                      ],
+                      builder: (context) => SizedBox(
+                        width: 300,
+                        child: ShopCard(
+                          title: context.parameters.getParameterValue('title'),
+                          price: context.parameters.getParameterValue('price'),
+                        ),
+                      ),
                     ),
                   ],
                 )
@@ -83,9 +79,11 @@ class ShopCardState extends State<ShopCard> {
   }
 
   void _decrementCount() {
-    setState(() {
-      if (_count > 0) _count--;
-    });
+    if (_count > 0) {
+      setState(() {
+        _count--;
+      });
+    }
   }
 
   @override
@@ -128,7 +126,7 @@ class ShopCardState extends State<ShopCard> {
                     ),
                   ],
                 ),
-                ElevatedButton(
+                FilledButton(
                   onPressed: () {
                     // Add to cart logic here
                   },
