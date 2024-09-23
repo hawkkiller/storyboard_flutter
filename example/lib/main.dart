@@ -79,9 +79,11 @@ class ShopCardState extends State<ShopCard> {
   }
 
   void _decrementCount() {
-    setState(() {
-      if (_count > 0) _count--;
-    });
+    if (_count > 0) {
+      setState(() {
+        _count--;
+      });
+    }
   }
 
   @override
