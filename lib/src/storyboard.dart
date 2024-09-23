@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:storyboard_flutter/src/plugin.dart';
+import 'package:storyboard_flutter/storyboard_flutter.dart';
 
 /// Storyboard is a collection of all stories.
 class Storyboard {
@@ -7,7 +8,7 @@ class Storyboard {
     required this.stories,
     this.plugins = const [],
   }) {
-    final allStories = getAllStories();
+    final allStories = getAllStoriesUnordered();
 
     // verify that all stories have unique ids
     final storyIds = allStories.map((story) => story.id).toSet();
@@ -26,16 +27,16 @@ class Storyboard {
   final List<Plugin> plugins;
 
   /// Returns all stories, including nested ones.
-  List<Story> getAllStories() {
+  List<Story> getAllStoriesUnordered() {
     List<Story> allStories = [];
-    List<Story> storiesToProcess = List.from(stories);
+    List<Story> storiesToProcess = List.of(stories);
 
     while (storiesToProcess.isNotEmpty) {
       Story currentStory = storiesToProcess.removeLast();
       allStories.add(currentStory);
 
       // Add children to the list of stories to process
-      storiesToProcess.addAll(currentStory.children.reversed);
+      storiesToProcess.addAll(currentStory.children);
     }
 
     return allStories;
@@ -50,8 +51,9 @@ class Story {
   Story({
     required this.id,
     required this.title,
-    this.builder,
     this.children = const [],
+    this.parameters = const [],
+    this.builder,
   });
 
   /// Unique identifier of the story.
@@ -61,6 +63,8 @@ class Story {
   ///
   /// For example, "Login Screen", "Button", "Text Field".
   final String title;
+
+  final List<Parameter<Object?>> parameters;
 
   /// Builder function that returns the widget to be rendered.
   ///

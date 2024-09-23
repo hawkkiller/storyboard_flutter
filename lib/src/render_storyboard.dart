@@ -26,9 +26,11 @@ class _RenderStoryboardState extends State<RenderStoryboard> {
   @override
   Widget build(BuildContext context) => StoryNotifier(
         storyboard: widget.storyboard,
-        child: _StoryboardWrappers(
-          plugins: widget.storyboard.plugins,
-          child: _RenderStoryboard(storyboard: widget.storyboard),
+        child: ParametersScope(
+          child: _StoryboardWrappers(
+            plugins: widget.storyboard.plugins,
+            child: _RenderStoryboard(storyboard: widget.storyboard),
+          ),
         ),
       );
 }
@@ -96,28 +98,82 @@ class __RenderStoryboardState extends State<_RenderStoryboard> {
             ),
           ),
         ),
-        Material(
-          elevation: 2,
-          color: Theme.of(context).colorScheme.surfaceContainer,
-          child: SizedBox(
-            width: 200,
-            height: double.infinity,
-            child: Column(
-              children: [
-                for (final plugin in widget.storyboard.plugins)
-                  if (plugin.panelBuilder != null) ...[
-                    Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: plugin.panelBuilder!(context),
-                    ),
-                  ],
-              ],
-            ),
-          ),
-        ),
+        OptionsSidebar(storyboard: widget.storyboard, activeStory: activeStory),
       ],
     );
   }
+}
+
+class OptionsSidebar extends StatelessWidget {
+  const OptionsSidebar({
+    super.key,
+    required this.storyboard,
+    required this.activeStory,
+  });
+
+  final Storyboard storyboard;
+  final Story? activeStory;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        elevation: 2,
+        color: Theme.of(context).colorScheme.surfaceContainer,
+        child: SizedBox(
+          width: 250,
+          height: double.infinity,
+          child: Column(
+            children: [
+              if (activeStory != null) ...[
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: _Parameters(activeStory: activeStory!),
+                ),
+                const Divider(),
+              ],
+              for (final plugin in storyboard.plugins)
+                if (plugin.panelBuilder != null) ...[
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: plugin.panelBuilder!(context),
+                  ),
+                ],
+            ],
+          ),
+        ),
+      );
+}
+
+/// {@template render_storyboard}
+/// _Parameters widget.
+/// {@endtemplate}
+class _Parameters extends StatelessWidget {
+  /// {@macro render_storyboard}
+  const _Parameters({
+    super.key, // ignore: unused_element
+    required this.activeStory,
+  });
+
+  final Story activeStory;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Parameters', style: TextStyle(fontWeight: FontWeight.bold)),
+          for (final parameter in activeStory.parameters)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: parameter.build(
+                context,
+                onChanged: (value) => ParametersScope.of(context).updateParameterValue(
+                  storyId: activeStory.id,
+                  parameterName: parameter.name,
+                  value: value,
+                ),
+              ),
+            ),
+        ],
+      );
 }
 
 /// {@template storyboard_wrappers}
@@ -344,7 +400,7 @@ class StoryNotifierState extends State<StoryNotifier> {
       return null;
     }
 
-    for (final story in widget.storyboard.getAllStories()) {
+    for (final story in widget.storyboard.getAllStoriesUnordered()) {
       if (story.id == activeId) {
         return story;
       }

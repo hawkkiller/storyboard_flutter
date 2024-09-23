@@ -26,7 +26,6 @@ class MyApp extends StatelessWidget {
         home: Scaffold(
           body: RenderStoryboard(
             storyboard: Storyboard(
-              plugins: [ParametersPlugin()],
               stories: [
                 Story(
                   id: 'some-screen',
@@ -35,17 +34,16 @@ class MyApp extends StatelessWidget {
                     Story(
                       id: 'shop-card',
                       title: 'Shop Card',
+                      parameters: [
+                        StringParameter(name: 'title', initialValue: 'Title'),
+                        DoubleParameter(name: 'price', initialValue: 10),
+                      ],
                       builder: (context) {
-                        final parametersScope = ParametersScope.of(context);
                         return SizedBox(
-                          width: 350,
+                          width: 300,
                           child: ShopCard(
-                            title: parametersScope.addParameter(
-                              StringParameter(name: 'titled', value: 'Title'),
-                            ),
-                            price: parametersScope.addParameter(
-                              DoubleParameter(name: 'price', value: 10),
-                            ),
+                            title: context.parameters.getParameterValue('title'),
+                            price: context.parameters.getParameterValue('price'),
                           ),
                         );
                       },
