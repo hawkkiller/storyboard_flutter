@@ -158,6 +158,7 @@ class _Parameters extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           const Text('Parameters', style: TextStyle(fontWeight: FontWeight.bold)),
           for (final parameter in activeStory.parameters)
