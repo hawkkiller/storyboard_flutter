@@ -62,7 +62,16 @@ class ParametersScopeState extends State<ParametersScope> {
           {},
           (params, parameter) => {
             ...params,
-            parameter.name: oldParams[parameter.name] ?? parameter.initialValue,
+            parameter.name: () {
+              final oldParam = oldParams[parameter.name];
+              final newParam = parameter.initialValue;
+
+              if (oldParam == null || oldParam.runtimeType != newParam.runtimeType) {
+                return newParam;
+              }
+
+              return oldParam;
+            }(),
           },
         ) ??
         {};
